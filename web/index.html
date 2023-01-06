@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>ESP32 血氧仪</title>
+    <meta charset="UTF-8">
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <!-- https://code.z01.com/bootstrap/index.html -->
+    <link rel='stylesheet' href='css/bootstrap.min.css'>
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <!-- https://chartjs.bootcss.com/docs/getting-started/usage.html -->
+    <script src="js/chart.min.js"></script>
+    <style>
+        .bigFont {
+            margin: 0;
+            font-size: 5em;
+            font-weight: bolder;
+            line-height: 60%;
+        }
+        
+        .symbolFont {
+            font-size: 2em;
+            font-weight: lighter;
+        }
+        
+        .iconFont {
+            color: #df4848;
+        }
+        
+        @media screen and (min-width: 992px) {
+            /*PC端*/
+            #historyChartDiv {
+                width: 100%;
+                height: 35em;
+            }
+        }
+        
+        @media screen and (min-width: 300px) and (max-width: 767px) {
+            /*手机端*/
+            #historyChartDiv {
+                width: 100%;
+                height: 20em;
+            }
+            #pills-tab {
+                font-size: 0.75em;
+            }
+            #deviceInfo {
+                font-size: 0.9em;
+            }
+            #config {
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container my-3">
+        <!-- 导航栏 -->
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist" style="background-color: #e3f2fd;">
+            <li class="nav-item" role="presentation">
+                <a class="text-nowrap nav-link active" id="home-tab" data-bs-toggle="pill" href="#home" role="tab" aria-controls="home" aria-selected="true">ESP32 血氧仪</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="text-nowrap nav-link" id="deviceInfo-tab" data-bs-toggle="pill" href="#deviceInfo" role="tab" aria-controls="deviceInfo" aria-selected="false">设备信息</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="text-nowrap nav-link" id="config-tab" data-bs-toggle="pill" href="#config" role="tab" aria-controls="config" aria-selected="false">设置</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="text-nowrap nav-link" id="about-tab" data-bs-toggle="pill" href="#about" role="tab" aria-controls="about" aria-selected="false">关于</a>
+            </li>
+        </ul>
+        <div class="tab-content" id="pills-tabContent">
+            <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
+                <!-- 传感器信息 -->
+                <div class="shadow p-3">
+                    <div class="mb-3">
+                        <div class="row">
+                            <!-- 心率 -->
+                            <div class="col-6">
+                                <!-- 数据显示 -->
+                                <div class="d-flex flex-column justify-content-center align-items-center">
+                                    <p class="symbolFont">
+                                        <!-- https://github.com/bytedance/IconPark -->
+                                        <?xml version="1.0" encoding="UTF-8"?><svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11 32L18 23L24 32L30 23L35 31H44" stroke="#d0021b" stroke-width="2" stroke-miterlimit="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M44 19C44 12.9249 39.0751 8 33 8C29.2797 8 25.9907 9.8469 24 12.6738C22.0093 9.8469 18.7203 8 15 8C8.92487 8 4 12.9249 4 19C4 30 17 40 24 42.3262C25.1936 41.9295 26.5616 41.3098 28.0099 40.5" stroke="#d0021b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>                                        心率
+                                    </p>
+                                    <p id="BPM" class="bigFont">---</p>
+                                    <p class="symbolFont">BPM</p>
+                                    <!-- 图标 -->
+                                </div>
+                            </div>
+                            <!-- 血氧 -->
+                            <div class="col-6">
+                                <!-- 数据显示 -->
+                                <div class="d-flex flex-column justify-content-center align-items-center">
+                                    <p class="symbolFont">
+                                        <?xml version="1.0" encoding="UTF-8"?><svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.2442 22.263C17.9517 17.3076 16.7773 14.7417 14.7208 14.5654C11.4002 14.2807 6.31025 19.7086 4.80125 27.3367C3.29225 34.9648 4.03742 40.4289 6.01197 40.7978C7.98652 41.1667 10.8556 39.0174 12.2168 39.0174C13.578 39.0174 18.2958 40.0579 18.2958 38.1732C18.2958 37.2445 18.2958 34.9908 18.2958 30.0702" stroke="#d0021b" stroke-width="2" stroke-linecap="round"/><path d="M29.6236 22.3707C29.9054 17.3447 31.0819 14.7429 33.1532 14.5654C36.4739 14.2807 41.5638 19.7086 43.0728 27.3367C44.5818 34.9648 43.8366 40.4289 41.8621 40.7978C39.8875 41.1667 37.0184 39.0174 35.6573 39.0174C34.2961 39.0174 29.5782 40.0579 29.5782 38.1732C29.5782 37.2467 29.5782 34.9702 29.5782 30.0702" stroke="#d0021b" stroke-width="2" stroke-linecap="round"/><path d="M20.5557 5V19.9106C20.5121 22.2021 18.6 23.3478 14.8193 23.3478" stroke="#d0021b" stroke-width="2" stroke-linecap="round"/><path d="M27.292 5V19.9106C27.3355 22.2021 29.2476 23.3478 33.0283 23.3478" stroke="#d0021b" stroke-width="2" stroke-linecap="round"/><path d="M15 30.0704C18.9553 30.0704 21.9553 29.1311 24 27.2524C26.0594 29.1311 29.069 30.0704 33.0286 30.0704" stroke="#d0021b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>                                        血氧
+                                    </p>
+                                    <p id="SpO2" class="bigFont">---</p>
+                                    <p class="symbolFont">%</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 历史图表 -->
+                    <div id="historyChartDiv">
+                        <canvas id="historyChart"></canvas>
+                    </div>
+                    <!-- 导出完整历史数据 -->
+                    <button type="button" class="btn btn-primary w-100 mt-3" onclick="exportHistoricalData()">导出本次完整历史数据</button>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="deviceInfo" role="tabpanel" aria-labelledby="deviceInfo-tab">
+                <div id="deviceInfo" class="shadow p-4 mb-3">
+                    <!-- 设备信息 -->
+                    <ul class="list-group shadow-sm">
+                        <li class="list-group-item">
+                            <div class="row justify-content-between">
+                                <span class="col-xs-12 col-sm-6 fw-bold">设备名称</span>
+                                <span class="col-xs-12 col-sm-6 text-sm-end" id="deviceName">N/A</span>
+                            </div>
+                        </li>
+                        <li class="list-group-item">
+                            <div class="row justify-content-between">
+                                <span class="col-xs-12 col-sm-6 fw-bold">处理器</span>
+                                <span class="col-xs-12 col-sm-6 text-sm-end" id="CPU">N/A</span>
+                            </div>
+                        </li>
+                        <li class="list-group-item">
+                            <div class="row justify-content-between">
+                                <span class="col-xs-12 col-sm-6 fw-bold">内存</span>
+                                <span class="col-xs-12 col-sm-6 text-sm-end" id="MEM">N/A</span>
+                            </div>
+                        </li>
+                        <li class="list-group-item">
+                            <div class="row justify-content-between">
+                                <span class="col-xs-12 col-sm-6 fw-bold">磁盘</span>
+                                <span class="col-xs-12 col-sm-6 text-sm-end" id="FLASH">N/A</span>
+                            </div>
+                        </li>
+                    </ul>
+                    <ul class="list-group shadow-sm mt-4">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold">编译时间</span>
+                            <span id="compilationDate">N/A</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold">SDK版本</span>
+                            <span id="sdkVersion">N/A</span>
+                        </li>
+                        <li class="list-group-item">
+                            <div class="row justify-content-between">
+                                <span class="col-xs-12 col-sm-6 fw-bold">固件MD5</span>
+                                <span class="col-xs-12 col-sm-6 text-sm-end" id="sketchMD5">N/A</span>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="config" role="tabpanel" aria-labelledby="config-tab">
+                <div class="row me-3">
+                    <!-- 常规配置 -->
+                    <div class="shadow p-4 m-3 col-xs-12 col-sm-5">
+                        <h2 class="fw-lighter">本地设置</h2>
+                        <hr>
+                        <!-- 传感器数据刷新 与 历史记录 -->
+                        <div class="mb-3">
+                            <div class="row mb-3">
+                                <label for="updateSensorDelay" class="col-12 col-form-label fw-bold">传感器刷新延迟(秒)</label>
+                                <div class="col-8">
+                                    <input type="number" class="form-control" id="updateSensorDelay" onBlur="this.value=Math.abs(this.value)">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="chartHistoryPoint" class="col-12 col-form-label fw-bold">图表历史点(个)</label>
+                                <div class="col-8">
+                                    <input type="number" class="form-control" id="chartHistoryPoint" onBlur="this.value=Math.abs(this.value)">
+                                </div>
+                                <div class="col-4">
+                                    <button type="button" class="btn btn-warning w-100" onclick="saveLocalConfig()">保存</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 网络配置 -->
+                    <div class="shadow p-4 m-3 col-xs-12 col-sm-5 ">
+                        <h2 class="fw-lighter">设备设置</h2>
+                        <hr>
+                        <!-- 开放热点信息 -->
+                        <div class="mb-2">
+                            <div class="row">
+                                <label for="AP_ssid" class="col-12 col-form-label fw-bold">设备名称</label>
+                                <div class="col-8">
+                                    <input type="text" class="form-control" id="AP_ssid">
+                                </div>
+                                <div class="col-4">
+                                    <button type="button" class="btn btn-warning w-100" onclick="setAPConfig()">保存</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 接入点信息 -->
+                        <div>
+                            <div class="row mb-2">
+                                <label for="STA_ssid" class="col-12 col-form-label fw-bold">连接热点_名称</label>
+                                <div class="col-8 ">
+                                    <input type="text" class="form-control" id="STA_ssid">
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label for="STA_passwd" class="col-12 col-form-label fw-bold">连接热点_密码</label>
+                                <div class="col-8">
+                                    <input type="password" class="form-control" id="STA_passwd" placeholder="修改密码">
+                                </div>
+                                <div class="col-4">
+                                    <button type="button" class="btn btn-warning w-100" onclick="setSTAConfig()">保存</button>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <!-- 按钮组 -->
+                        <div class="mt-3 d-flex justify-content-start">
+                            <button type="button" class="btn btn-primary w-25 me-5" onclick="getConfig()">刷新</button>
+                            <button type="button" class="btn btn-danger w-25" onclick="reboot()">重启</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="about" role="tabpanel" aria-labelledby="about-tab">
+                <div class="shadow p-4 mb-3">
+                    <h2>注意 Attention</h2>
+                    <p class="fw-lighter">不对本项目的心率和血氧读数精度作出任何保障，不对本项目的稳定性和可靠性负责，不对本项目引发的健康问题负责，不能直接将本项目作为医疗产品使用，绝不对本项目提供任何担保。本项目的说明文档如果出现歧义以中文版本为准。</p>
+                    <h2>背景 Background</h2>
+                    <p class="fw-lighter">在新冠疫情开放后的非常时期，您需要时刻监视您和您的家人的身体状况,以最大程度预防紧急情况发生，您迫切地需要一个血氧仪来监视血氧和心率的情况，但很不幸地网上血氧仪的价格已经被奸商和黄牛炒得水涨船高，您即使咬牙买下，却仍旧面临交易成功后被商家单方毁约、始终不发货、发货中途快递退回等问题。为了家人的健康，现在您不得不寻求万能的Internet帮助并马上动手现场手搓一个血氧仪。</p>
+                    <h2>开源代码使用情况 和 许可证 License</h2>
+                    <p class="fw-lighter">注意：本项目的不同部分使用不同开源协议！若没有明确说明，则使用Apache-2.0协议。</p>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th scope="col">名称 Name</th>
+                                    <th scope="col">开源协议 License</th>
+                                    <th scope="col">备注 Note</th>
+                                    <th scope="col">链接 Link</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>ESP32_MAX30102_simple-SpO2_plotter</td>
+                                    <td>Apache-2.0</td>
+                                    <td>使用在cal_BPM_SpO2.c血氧核心计算部分</td>
+                                    <td>https://github.com/coniferconifer/ESP32_MAX30102_simple-SpO2_plotter</td>
+                                </tr>
+                                <tr>
+                                    <td>SparkFun_MAX3010x_Pulse_and_Proximity_Sensor_Library</td>
+                                    <td>CC BY-SA 4.0 和 MIT</td>
+                                    <td>MAX3010X驱动程序</td>
+                                    <td>https://github.com/coniferconifer/ESP32_MAX30102_simple-SpO2_plotter</td>
+                                </tr>
+                                <tr>
+                                    <td>ArduinoJson</td>
+                                    <td>MIT</td>
+                                    <td>用于处理JSON</td>
+                                    <td>https://arduinojson.org/</td>
+                                </tr>
+                                <tr>
+                                    <td>SimpleFTPServer</td>
+                                    <td>MIT</td>
+                                    <td>提供FTP文件管理服务</td>
+                                    <td>https://github.com/xreef/SimpleFTPServer</td>
+                                </tr>
+                                <tr>
+                                    <td>Bootstrap</td>
+                                    <td>Apache-2.0</td>
+                                    <td>前端CSS框架</td>
+                                    <td>https://github.com/twbs/bootstrap</td>
+                                </tr>
+                                <tr>
+                                    <td>ChartJS</td>
+                                    <td>MIT</td>
+                                    <td>提供前端图表绘制</td>
+                                    <td>https://www.chartjs.org/</td>
+                                </tr>
+                                <tr>
+                                    <td>IconPark</td>
+                                    <td>Apache-2.0</td>
+                                    <td>提供两个前端图标</td>
+                                    <td>https://github.com/bytedance/IconPark</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="fw-lighter">您如果发现本项目存在开源许可证使用不正确问题或者开源代码使用情况公示存在遗漏问题，还请您联系本项目开发者，我们将及时处理开源代码混合许可证可能存在的使用问题。</p>
+                    <h2>开源地址 Open source Link</h2>
+                    <p class="fw-lighter">https://github.com/createskyblue/esp32-web-oximeter</p>
+                    <p class="fw-lighter">https://gitee.com/createskyblue/esp32-web-oximeter</p>
+                    <h2>联系开发者 Contact Developer</h2>
+                    <p class="fw-lighter">电子邮箱：createskyblue@outlook.com 1281702594@qq.com</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <script>
+        // 传感器数据
+        var updateSensor_Timer = null;
+        var historyDatas = [];
+        var historyTimeLabels = [];
+        var historyBPM = [];
+        var historySpO2 = [];
+        var BPM_e = document.getElementById("BPM");
+        var SpO2_e = document.getElementById("SpO2");
+        //设备信息
+        var deviceName_e = document.getElementById("deviceName");
+        var CPU_e = document.getElementById("CPU");
+        var MEM_e = document.getElementById("MEM");
+        var FLASH_e = document.getElementById("FLASH");
+        var compilationDate_e = document.getElementById("compilationDate");
+        var sdkVersion_e = document.getElementById("sdkVersion");
+        var sketchMD5_e = document.getElementById("sketchMD5");
+        var deviceInfo_JSON;
+        //本地设置
+        var updateSensorDelay; //单位:秒
+        var chartHistoryPoint;
+        var updateSensorDelay_e = document.getElementById("updateSensorDelay");
+        var chartHistoryPoint_e = document.getElementById("chartHistoryPoint");
+        //设备设置
+        var config_JSON;
+        var AP_ssid_e = document.getElementById("AP_ssid");
+        var STA_ssid_e = document.getElementById("STA_ssid");
+        var STA_passwd_e = document.getElementById("STA_passwd");
+
+        //应用本地设置
+        function applyLocalConfig() {
+            //读取本地存储
+            if (window.localStorage) {
+                updateSensorDelay = parseInt(localStorage.getItem("updateSensorDelay"));
+                chartHistoryPoint = parseInt(localStorage.getItem("chartHistoryPoint"));
+                if (updateSensorDelay == NaN) updateSensorDelay = 1;
+                if (chartHistoryPoint == NaN) chartHistoryPoint = 30;
+            }
+            //应用设置
+            updateSensorDelay_e.value = updateSensorDelay;
+            chartHistoryPoint_e.value = chartHistoryPoint;
+        }
+        applyLocalConfig();
+
+        //保存并应用本地设置
+        function saveLocalConfig() {
+            //持久化
+            var localStorage = window.localStorage;
+            localStorage.setItem("updateSensorDelay", updateSensorDelay_e.value);
+            localStorage.setItem("chartHistoryPoint", chartHistoryPoint_e.value);
+            //应用设置
+            applyLocalConfig();
+            alert("保存成功!");
+        }
+
+        //输出格式化后的时间
+        function getTime() {
+            //将13位时间戳转换成时间格式 输出为2018-10-09
+            var time = Date.now();
+            var date = new Date(time); //时间戳为10位需*1000，时间戳为13位的话不需乘1000
+            var h = date.getHours() + ':';
+            var m = date.getMinutes() + ':';
+            var s = date.getSeconds();
+            return h + m + s;
+        }
+
+        //计算文本字节长度
+        function calByteLength(str) {
+            return str.replace(/[\u0391-\uFFE5]/g, "##").length;
+        }
+
+        //图表
+        const historyChart = document.getElementById('historyChart');
+        const data = {
+            labels: historyTimeLabels,
+            datasets: [{
+                label: '心率',
+                data: historyBPM,
+                fill: false,
+                borderColor: 'rgb(249, 84, 39)', // 设置线的颜色
+                tension: 0.1,
+                pointRadius: 0,
+            }, {
+                label: '血氧',
+                data: historySpO2,
+                fill: false,
+                borderColor: 'rgb(0, 122, 204)', // 设置线的颜色
+                tension: 0.1,
+                pointRadius: 0,
+            }]
+        };
+        const config = {
+            type: 'line', // 设置图表类型
+            data: data,
+            options: {
+                responsive: true, // 设置图表为响应式，根据屏幕窗口变化而变化
+                maintainAspectRatio: false,
+                bezierCurve: true, // 是否使用贝塞尔曲线? 即:线条是否弯曲
+                legend: {
+                    usePointStyle: true,
+                },
+                animation: {
+                    duration: 0.1
+                }
+            }
+
+        };
+        const myChart = new Chart(historyChart, config);
+
+        //获取传感器数据
+        function updateSensor() {
+            //关闭定时器
+            if (updateSensor_Timer != null)
+                clearInterval(updateSensor_Timer);
+
+            const data = null;
+            const xhr = new XMLHttpRequest();
+            xhr.withCredentials = true;
+            xhr.addEventListener("readystatechange", function() {
+                if (this.readyState === this.DONE) {
+                    var json = JSON.parse(this.responseText);
+                    //更新页面数据
+                    BPM_e.innerText = json.BPM.toFixed(0);
+                    //血氧
+                    if (json.SpO2.toFixed(0) != 80)
+                        SpO2_e.innerText = json.SpO2.toFixed(0);
+                    else
+                        SpO2_e.innerText = "---";
+                    //保存数据
+                    json["localTime"] = Date.now();
+                    historyDatas.push(json);
+                    //更新历史图表数据
+                    historyTimeLabels.push(getTime());
+                    historyBPM.push(json.BPM);
+                    historySpO2.push(json.SpO2);
+                    //弹出旧图表数据
+                    while (historyTimeLabels.length > chartHistoryPoint) {
+                        historyTimeLabels.shift();
+                        historyBPM.shift();
+                        historySpO2.shift();
+                    }
+                    //更新图表
+                    myChart.update();
+                    //重启定时器
+                    updateSensor_Timer = setInterval(updateSensor, updateSensorDelay * 1000);
+                }
+            });
+            xhr.open("GET", "getBPM_SpO2");
+            xhr.send(data);
+        }
+        updateSensor();
+        //开启定时器自动刷新传感器数据
+
+        //获取设备信息
+        function getDeviceInfo() {
+            const data = null;
+            const xhr = new XMLHttpRequest();
+            xhr.withCredentials = true;
+            xhr.addEventListener("readystatechange", function() {
+                if (this.readyState === this.DONE) {
+                    deviceInfo_JSON = JSON.parse(this.responseText);
+                    //更新设备信息
+                    CPU_e.innerText = deviceInfo_JSON.chipModel + " V" + deviceInfo_JSON.chipRevision + " @ " + deviceInfo_JSON.cpuFreqMHz + "MHz x " + deviceInfo_JSON.chipCores;
+                    MEM_e.innerText = "Heap: " + (deviceInfo_JSON.heapSizeKiB - deviceInfo_JSON.freeHeapKiB) + "/" + deviceInfo_JSON.heapSizeKiB + "Kib" + " PSRAM: " + (deviceInfo_JSON.psramSizeKiB - deviceInfo_JSON.freePsramKiB) + "/" + deviceInfo_JSON.psramSizeKiB + "Kib";
+                    FLASH_e.innerText = deviceInfo_JSON.flashChipId + " @ " + deviceInfo_JSON.flashSpeedMHz + "MHz " + deviceInfo_JSON.flashSizeMib + "Mib";
+
+                    compilationDate_e.innerText = deviceInfo_JSON.compilationDate;
+                    sdkVersion_e.innerText = deviceInfo_JSON.sdkVersion;
+                    sketchMD5_e.innerText = deviceInfo_JSON.sketchMD5;
+                }
+            });
+            xhr.open("GET", "getSystemStatus");
+            xhr.send(data);
+        }
+        getDeviceInfo();
+
+        //保存JSON数据
+        //https://blog.csdn.net/qq_37312180/article/details/125088139
+        function saveJSON(data, filename) {
+            if (!data) {
+                alert("保存的数据为空");
+                return;
+            }
+            if (!filename) filename = "json.json";
+            if (typeof data === "object") {
+                data = JSON.stringify(data, undefined, 4);
+            }
+            var blob = new Blob([data], {
+                    type: "text/json"
+                }),
+                e = document.createEvent("MouseEvents"),
+                a = document.createElement("a");
+            a.download = filename;
+            a.href = window.URL.createObjectURL(blob);
+            a.dataset.downloadurl = ["text/json", a.download, a.href].join(":");
+            e.initMouseEvent(
+                "click",
+                true,
+                false,
+                window,
+                0,
+                0,
+                0,
+                0,
+                0,
+                false,
+                false,
+                false,
+                false,
+                0,
+                null
+            );
+            a.dispatchEvent(e);
+        }
+
+        //导出历史数据
+        function exportHistoricalData() {
+            saveJSON(historyDatas, "ESP32血氧仪" + Date.now() + ".json");
+        }
+
+        //保存配置
+        function setAPConfig() {
+            //验证输入合法性
+            var SSID_length = calByteLength(AP_ssid_e.value);
+            if (SSID_length >= 32) {
+                alert("失败:名称过长");
+                return;
+            }
+            const data = JSON.stringify({
+                "AP_ssid": AP_ssid_e.value
+            });
+            //提交
+            const xhr = new XMLHttpRequest();
+            xhr.withCredentials = true;
+
+            xhr.addEventListener("readystatechange", function() {
+                if (this.readyState === this.DONE) {
+                    var res_JSON = JSON.parse(this.responseText);
+                    if (res_JSON.msg === "successes") {
+                        //刷新
+                        getConfig();
+                        alert("保存成功，手动重启后生效！");
+                    }
+                }
+            });
+
+            xhr.open("POST", "setAPConfig");
+            xhr.setRequestHeader("content-type", "application/json");
+
+            xhr.send(data);
+        }
+
+        function setSTAConfig() {
+            //验证输入合法性
+            var SSID_length = calByteLength(STA_ssid_e.value);
+            var passwd_length = calByteLength(STA_passwd.value);
+            if (SSID_length >= 32) {
+                alert("失败:名称过长");
+                return;
+            }
+            if (passwd_length != 0 && (passwd_length < 8 || passwd_length > 32)) {
+                alert("失败:密码过长或过短");
+                return;
+            }
+            //提交
+            const data = JSON.stringify({
+                "STA_ssid": STA_ssid_e.value,
+                "STA_passwd": STA_passwd.value
+            });
+
+            const xhr = new XMLHttpRequest();
+            xhr.withCredentials = true;
+
+            xhr.addEventListener("readystatechange", function() {
+                if (this.readyState === this.DONE) {
+                    var res_JSON = JSON.parse(this.responseText);
+                    if (res_JSON.msg === "successes") {
+                        alert("保存成功，手动重启后生效！");
+                    }
+                }
+            });
+
+            xhr.open("POST", "setSTAConfig");
+            xhr.setRequestHeader("content-type", "application/json");
+
+            xhr.send(data);
+        }
+
+        //获取配置
+        function getConfig() {
+            const data = null;
+            const xhr = new XMLHttpRequest();
+            xhr.withCredentials = true;
+            xhr.addEventListener("readystatechange", function() {
+                if (this.readyState === this.DONE) {
+                    config_JSON = JSON.parse(this.responseText);
+                    //更新配置信息
+                    deviceName_e.innerText = config_JSON.AP_ssid;
+                    AP_ssid_e.value = config_JSON.AP_ssid;
+                    STA_ssid_e.value = config_JSON.STA_ssid;
+                }
+            });
+            xhr.open("GET", "getConfig");
+            xhr.send(data);
+        }
+        getConfig();
+
+        //重启设备
+        function reboot() {
+            const data = null;
+
+            const xhr = new XMLHttpRequest();
+            xhr.withCredentials = true;
+
+            xhr.addEventListener("readystatechange", function() {
+                if (this.readyState === this.DONE) {
+                    var res_JSON = JSON.parse(this.responseText);
+                    if (res_JSON.msg === "successes") {
+                        alert("设备执行重启中...");
+                    }
+                }
+            });
+
+            xhr.open("GET", "reboot");
+
+            xhr.send(data);
+        }
+    </script>
+</body>
+
+</html>
