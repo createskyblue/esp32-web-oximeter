@@ -43,7 +43,7 @@ https://github.com/coniferconifer/ESP32_MAX30102_simple-SpO2_plotter
                 <td>SparkFun_MAX3010x_Pulse_and_Proximity_Sensor_Library</td>
                 <td>CC BY-SA 4.0 和 MIT</td>
                 <td>MAX3010X驱动程序</td>
-                <td>https://github.com/coniferconifer/ESP32_MAX30102_simple-SpO2_plotter</td>
+                <td>https://github.com/sparkfun/SparkFun_MAX3010x_Sensor_Library</td>
             </tr>
             <tr>
                 <td>ArduinoJson</td>
