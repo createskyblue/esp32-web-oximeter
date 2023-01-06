@@ -24,7 +24,7 @@
 #endif
 
 #define I2C_SCL 22
-#define I2C_SDA 19
+#define I2C_SDA 21
 #define CONFIG_FILE_PATH "/config.json"
 #define DEVICE_NAME "ESP32 血氧仪"
 #define EVENT_NETWORK_OK B1
