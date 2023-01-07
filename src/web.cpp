@@ -105,6 +105,7 @@ void handle_getSystemStatus() {
 
     doc["millis"] = millis();
     doc["deviceName"] = DEVICE_NAME;
+    doc["STA_IP"] = WiFi.localIP();
     doc["compilationDate"] = compilationDate;
 
     doc["chipModel"] = ESP.getChipModel();

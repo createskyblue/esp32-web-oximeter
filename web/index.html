@@ -142,6 +142,10 @@
                     </ul>
                     <ul class="list-group shadow-sm mt-4">
                         <li class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold">IP地址</span>
+                            <span id="STA_IP">0.0.0.0</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
                             <span class="fw-bold">编译时间</span>
                             <span id="compilationDate">N/A</span>
                         </li>
@@ -318,10 +322,11 @@
         var compilationDate_e = document.getElementById("compilationDate");
         var sdkVersion_e = document.getElementById("sdkVersion");
         var sketchMD5_e = document.getElementById("sketchMD5");
+        var STA_IP_e = document.getElementById("STA_IP");
         var deviceInfo_JSON;
         //本地设置
-        var updateSensorDelay; //单位:秒
-        var chartHistoryPoint;
+        var updateSensorDelay = 1; //单位:秒
+        var chartHistoryPoint = 30;
         var updateSensorDelay_e = document.getElementById("updateSensorDelay");
         var chartHistoryPoint_e = document.getElementById("chartHistoryPoint");
         //设备设置
@@ -336,8 +341,8 @@
             if (window.localStorage) {
                 updateSensorDelay = parseInt(localStorage.getItem("updateSensorDelay"));
                 chartHistoryPoint = parseInt(localStorage.getItem("chartHistoryPoint"));
-                if (updateSensorDelay == NaN) updateSensorDelay = 1;
-                if (chartHistoryPoint == NaN) chartHistoryPoint = 30;
+                if (isNaN(updateSensorDelay)) updateSensorDelay = 1;
+                if (isNaN(chartHistoryPoint)) chartHistoryPoint = 30;
             }
             //应用设置
             updateSensorDelay_e.value = updateSensorDelay;
@@ -470,6 +475,7 @@
                     compilationDate_e.innerText = deviceInfo_JSON.compilationDate;
                     sdkVersion_e.innerText = deviceInfo_JSON.sdkVersion;
                     sketchMD5_e.innerText = deviceInfo_JSON.sketchMD5;
+                    STA_IP.innerText = deviceInfo_JSON.STA_IP;
                 }
             });
             xhr.open("GET", "getSystemStatus");
