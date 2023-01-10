@@ -92,7 +92,24 @@ https://github.com/coniferconifer/ESP32_MAX30102_simple-SpO2_plotter
 | SCL      | 22    |
 | SDA      | 21    |
 
-## 编译安装(略)
+## 使用预编译固件安装
+- 准备好预编译的发行版(releases)固件
+- 准备flash_download_tools，https://www.espressif.com.cn/zh-hans/support/download/other-tools
+- 打开flash_download_tools
+- 选择固件，以及配置安装地址
+- 选择"COM"串口
+- 按"START"按键进行固件下载
+- 完成后手动复位
+- ESP32自动开启热点"ESP32 血氧仪"
+- 连接热点
+- 使用浏览器打开 http://192.168.4.1
+- 开始使用
+
+![flash_download_tools_v3.6.7_配置界面](img/UseESPFlashTool.png)
+
+
+
+## 手动编译安装(略)
 
 Vscode使用PlatformIO编译并下载程序
 
@@ -102,7 +119,7 @@ Vscode使用PlatformIO编译并下载程序
 
 ESP32的默认地址为192.168.4.1
 
-## config.json 配置文件
+### config.json 配置文件
 
 在本项目的web文件夹下面，存放一个config.json文件，为ESP32的配置文件，文件内容如下
 
@@ -117,7 +134,7 @@ ESP32的默认地址为192.168.4.1
 你可以通过修改该文件，并通过FTP上传到ESP32 文件系统根目录，重启ESP32达到配网的目的
 
 
-## 使用FTP工具部署网页
+### 使用FTP工具部署网页
 
 请将本项目下面的Web文件夹内所有内容复制到
 
